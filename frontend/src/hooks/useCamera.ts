@@ -67,15 +67,31 @@ export const useCamera = () => {
 
   const captureFrame = useCallback((): string | null => {
     const video = videoRef.current;
-    if (!video || video.readyState < 2 || !video.videoWidth) return null;
-    if (!canvasRef.current) canvasRef.current = document.createElement("canvas");
+
+    if (!video || video.readyState !== 4 || !video.videoWidth) {
+      console.log("video not ready");
+      return null;
+    }
+
+    if (!canvasRef.current) {
+      canvasRef.current = document.createElement("canvas");
+    }
+
     const canvas = canvasRef.current;
     canvas.width = 320;
     canvas.height = Math.round((video.videoHeight / video.videoWidth) * 320);
+
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
+
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL("image/jpeg", 0.6);
+
+    const imageSrc = canvas.toDataURL("image/jpeg", 0.7);
+
+    console.log("IMAGE BAN GYI");
+    console.log("LENGTH:", imageSrc?.length);
+
+    return imageSrc;
   }, []);
 
   useEffect(() => () => stop(), [stop]);
