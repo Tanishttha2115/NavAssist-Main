@@ -156,12 +156,9 @@ const MainScreen: React.FC = () => {
           return;
         }
 
-        const formData = new FormData();
-        formData.append("file", fileBlob, "frame.jpg");
-
         const response = await fetch(`${API_BASE}/detect-image`, {
           method: "POST",
-          body: formData
+          body: fileBlob
         });
         const res = await response.json();
         console.log("DETECTION RESPONSE:", res);
