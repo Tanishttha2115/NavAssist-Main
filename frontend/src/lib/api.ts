@@ -1,10 +1,27 @@
-const API_BASE = "https://navassist-main.onrender.com";
+const API_BASE = "http://192.168.1.10:8000";
+
+// ─── Helper: data URL → Blob (no extra fetch needed) ───────────────────────
+function base64ToBlob(dataUrl: string): Blob {
+  const [header, base64] = dataUrl.split(",");
+  const mime = header.match(/:(.*?);/)?.[1] ?? "image/jpeg";
+  const binary = atob(base64);
+  const array = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    array[i] = binary.charCodeAt(i);
+  }
+  return new Blob([array], { type: mime });
+}
+
+// ─── Generic request helper ─────────────────────────────────────────────────
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
   try {
     const res = await fetch(`${API_BASE}${path}`, {
-      headers: { "Content-Type": "application/json" },
+      headers:
+        options?.body instanceof FormData
+          ? {}
+          : { "Content-Type": "application/json" },
       signal: controller.signal,
       ...options,
     });
@@ -15,6 +32,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   }
 }
 
+// ─── Types ──────────────────────────────────────────────────────────────────
 export interface LatLng {
   lat: number;
   lng: number;
@@ -51,9 +69,11 @@ export interface CommandResult {
   destination?: string;
 }
 
+// ─── API ────────────────────────────────────────────────────────────────────
 export const api = {
   navigate: (payload: NavigateRequest | string) => {
-    const body = typeof payload === "string" ? { destination: payload } : payload;
+    const body =
+      typeof payload === "string" ? { destination: payload } : payload;
     return request<NavigateResponse>("/navigate", {
       method: "POST",
       body: JSON.stringify(body),
@@ -61,33 +81,34 @@ export const api = {
   },
 
   detectLive: async (image?: string) => {
-    if (!image) {
-      return request<{ alerts?: string[]; objects?: DetectedObject[]; error?: string }>("/detect-live", {
-        method: "GET",
-      }); 
+    if (!image) return;
+
+    if (!image.startsWith("data:image")) {
+      console.error("Invalid image format");
+      return;
     }
 
-    const base64 = image.includes(",") ? image.split(",")[1] : image;
+    // ✅ Convert without an extra fetch() call
+    const blob = base64ToBlob(image);
 
-    const byteString = atob(base64);
-    const arrayBuffer = new ArrayBuffer(byteString.length);
-    const uint8Array = new Uint8Array(arrayBuffer);
-
-    for (let i = 0; i < byteString.length; i++) {
-      uint8Array[i] = byteString.charCodeAt(i);
-    }
-
-    const blob = new Blob([uint8Array], { type: "image/jpeg" });
     const formData = new FormData();
-    formData.append("file", blob, "frame.jpg");
+    formData.append("file", blob, "frame.jpg"); // ✅ filename required by FastAPI
 
-    const res = await fetch(`${API_BASE}/detect-image`, {
-      method: "POST",
-      body: formData,
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
 
-    if (!res.ok) throw new Error(`API error: ${res.status}`);
-    return res.json();
+    try {
+      const res = await fetch(`${API_BASE}/detect-image`, {
+        method: "POST",
+        body: formData,
+        signal: controller.signal,
+      });
+
+      if (!res.ok) throw new Error(`API error: ${res.status}`);
+      return res.json();
+    } finally {
+      clearTimeout(timeout);
+    }
   },
 
   sendSOS: (location: { latitude: number; longitude: number }) =>

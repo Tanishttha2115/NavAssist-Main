@@ -21,8 +21,6 @@ import OfflineBanner from "@/components/OfflineBanner";
 import ThemeToggle from "@/components/ThemeToggle";
 import LangToggle from "@/components/LangToggle";
 
-const API_BASE = "https://navassist-main.onrender.com";
-
 const MainScreen: React.FC = () => {
   const { t, speechLang } = useLang();
   const { location, error: locError } = useLocation();
@@ -54,11 +52,11 @@ const MainScreen: React.FC = () => {
     if (locError) speak(t.locationFail, speechLang);
   }, [locError, t, speechLang]);
 
-  // Voice transcript -> mirror into search input AND auto-submit (geocode + start nav)
+  // Voice transcript -> mirror into search input AND auto-submit
   useEffect(() => {
     if (!transcript) return;
     searchRef.current?.setQuery(transcript);
-    stop(); // ensure mic is off
+    stop();
     handleTextSubmit(transcript);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transcript]);
@@ -80,7 +78,7 @@ const MainScreen: React.FC = () => {
     setNavSteps(simple.map((s) => ({ instruction: s, distance: "" } as NavStep)));
     setCurrentStep(0);
     setNavigating(true);
-    camera.start(); // 🔥 start camera when navigation begins
+    camera.start();
   }, [camera]);
 
   const handleStepChange = useCallback(
@@ -93,7 +91,7 @@ const MainScreen: React.FC = () => {
     [navSteps, left, right]
   );
 
-  // ✅ stable camera control (prevents auto stop/start loop)
+  // Camera control
   useEffect(() => {
     if (navigating) {
       camera.start();
@@ -102,7 +100,7 @@ const MainScreen: React.FC = () => {
     }
   }, [navigating]);
 
-  // Live detection: capture frame -> POST -> generic parse -> priority -> smart voice
+  // ─── Live Detection ───────────────────────────────────────────────────────
   useEffect(() => {
     if (!navigating) {
       if (detectionRef.current) clearInterval(detectionRef.current);
@@ -128,59 +126,43 @@ const MainScreen: React.FC = () => {
     const tick = async () => {
       try {
         console.log("DETECTION RUNNING");
+
         const video = camera.videoRef.current;
         if (!video || video.readyState < 2 || video.videoWidth === 0) return;
 
-        const image = await camera.captureFrame();
-        let fileBlob = image;
+        // captureFrame returns base64 data URL string
+        const image = camera.captureFrame();
+        if (!image) return;
 
-        // If captureFrame returns base64 string, convert to Blob
-        if (typeof image === "string") {
-          if (!image.startsWith("data:image")) {
-            console.log("Invalid image string format", image);
-            return;
-          }
-          const arr = image.split(",");
-          const mime = arr[0].match(/:(.*?);/)?.[1] || "image/jpeg";
-          const bstr = atob(arr[1]);
-          let n = bstr.length;
-          const u8arr = new Uint8Array(n);
-          while (n--) {
-            u8arr[n] = bstr.charCodeAt(n);
-          }
-          fileBlob = new Blob([u8arr], { type: mime });
-        }
+        // ✅ Use api.detectLive — handles base64→Blob + FormData correctly
+        const res = await api.detectLive(image);
+        if (!res) return;
 
-        if (!fileBlob || !(fileBlob instanceof Blob) || fileBlob.size < 1000) {
-          console.log("Invalid/empty image", fileBlob);
-          return;
-        }
-
-        const response = await fetch(`${API_BASE}/detect-image`, {
-          method: "POST",
-          body: fileBlob
-        });
-        const res = await response.json();
         console.log("DETECTION RESPONSE:", res);
-        const alerts = (res.objects ?? []).map(obj => `${obj} ahead`);
-        if (alerts.length === 0) return;
 
-        // Generic parse: "label position"
+        const objects: string[] = res.objects ?? [];
+        if (objects.length === 0) return;
+
+        // Map each object to a DetectedObject (all "center" since backend
+        // doesn't return position — position logic can be added later)
+        const alerts = objects.map((obj) => `${obj} ahead`);
+
         const parsed = alerts.map((a) => {
           const tokens = a.toLowerCase().trim().split(/\s+/);
           let position: "left" | "center" | "right" = "center";
           if (tokens.includes("left")) position = "left";
           else if (tokens.includes("right")) position = "right";
-          const label = tokens.find((t) => !["left", "right", "center"].includes(t)) || "object";
+          const label =
+            tokens.find((tk) => !["left", "right", "center", "ahead"].includes(tk)) ||
+            "object";
           return { label, position };
         });
 
-        // Priority: center > left/right (first match wins)
+        // Priority: center > left/right
         const chosen =
           parsed.find((p) => p.position === "center") || parsed[0];
 
         const key = `${chosen.label}-${chosen.position}`;
-        // temporarily allow repeated alerts for debugging
         lastSpokenRef.current = key;
 
         const obj: DetectedObject = {
@@ -188,6 +170,7 @@ const MainScreen: React.FC = () => {
           position: chosen.position,
           severity: chosen.position === "center" ? "danger" : "warning",
         };
+
         setDetectedObjects([obj]);
         speakOnce(phraseFor(chosen.label, chosen.position));
 
@@ -228,7 +211,6 @@ const MainScreen: React.FC = () => {
     [t, speechLang, speak]
   );
 
-  // Geocode typed text via Google Geocoder (frontend, uses already-loaded JS API)
   const handleTextSubmit = useCallback(
     (text: string) => {
       if (!(window as any).google?.maps) {
@@ -239,7 +221,11 @@ const MainScreen: React.FC = () => {
       geocoder.geocode({ address: text }, (results, status) => {
         if (status === "OK" && results && results[0]) {
           const loc = results[0].geometry.location;
-          const place = { name: results[0].formatted_address, lat: loc.lat(), lng: loc.lng() };
+          const place = {
+            name: results[0].formatted_address,
+            lat: loc.lat(),
+            lng: loc.lng(),
+          };
           setDestination(place);
           speak(`${t.destinationSet} ${place.name}`, speechLang);
         } else {
@@ -261,7 +247,7 @@ const MainScreen: React.FC = () => {
     setCurrentStep(0);
     setDetectedObjects([]);
     setDestination(null);
-    camera.stop(); // 🔥 stop camera
+    camera.stop();
     clearQueue();
     speak(t.navStopped, speechLang);
   };
@@ -292,7 +278,11 @@ const MainScreen: React.FC = () => {
           onStepChange={handleStepChange}
         />
 
-        <LocationSearch ref={searchRef} onSelect={handlePlaceSelect} onTextSubmit={handleTextSubmit} />
+        <LocationSearch
+          ref={searchRef}
+          onSelect={handlePlaceSelect}
+          onTextSubmit={handleTextSubmit}
+        />
 
         <div className="flex gap-3">
           <button
@@ -315,6 +305,7 @@ const MainScreen: React.FC = () => {
         </div>
 
         <MicButton listening={listening} onPress={handleMicPress} />
+
         {transcript && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -331,7 +322,12 @@ const MainScreen: React.FC = () => {
         <EmergencyButton location={location} />
       </div>
 
-      <CameraOverlay videoRef={camera.videoRef} active={camera.active} start={camera.start} stop={camera.stop} />
+      <CameraOverlay
+        videoRef={camera.videoRef}
+        active={camera.active}
+        start={camera.start}
+        stop={camera.stop}
+      />
     </div>
   );
 };
