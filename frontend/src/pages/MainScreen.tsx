@@ -22,6 +22,10 @@ import ThemeToggle from "@/components/ThemeToggle";
 import LangToggle from "@/components/LangToggle";
 
 const API_BASE = "https://navassist-main.onrender.com";
+<<<<<<< HEAD
+=======
+
+>>>>>>> 9de41c3 (5th)
 const MainScreen: React.FC = () => {
   const { t, speechLang } = useLang();
   const { location, error: locError } = useLocation();
