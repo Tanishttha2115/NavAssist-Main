@@ -35,7 +35,7 @@ const CameraOverlay: React.FC<CameraOverlayProps> = ({ videoRef, active, start, 
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="fixed bottom-24 left-4 z-40 w-[280px] h-[200px] sm:w-[360px] sm:h-[260px] rounded-2xl overflow-hidden border-2 border-primary shadow-2xl bg-black"
+            className="fixed bottom-24 left-4 z-40 w-[140px] h-[100px] sm:w-[180px] sm:h-[130px] rounded-2xl overflow-hidden border-2 border-primary shadow-2xl bg-black"
           >
             <video
               ref={videoRef}
