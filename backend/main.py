@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from ultralytics import YOLO
 import cv2
@@ -13,6 +13,7 @@ import requests
 import re
 from fastapi import Request
 import numpy as np
+import os
 
 # ─────────────────────────────────────────────
 # Logging
@@ -25,21 +26,21 @@ logging.basicConfig(level=logging.INFO)
 model = YOLO("yolov8n.pt")
 
 # ─────────────────────────────────────────────
-# Global camera (thread-safe read via lock)
+# Named objects — inका naam bolta hai
+# Baaki sab ke liye sirf "obstacle"
+# ─────────────────────────────────────────────
+NAMED_OBJECTS = {"person", "car", "truck", "bus", "bicycle", "motorcycle", "dog"}
+
+# ─────────────────────────────────────────────
+# Global camera
 # ─────────────────────────────────────────────
 camera_lock = Lock()
-import os
-
-if os.getenv("RENDER"):
-    camera = None
-else:
-    camera = None
+camera = None
 if camera is not None and not camera.isOpened():
     logging.error("Global camera failed to initialize")
 
 
 def read_frame():
-    """Thread-safe single frame read from global camera."""
     if camera is None:
         return False, None
     with camera_lock:
@@ -56,7 +57,6 @@ voice_lock = Lock()
 
 
 def enqueue_voice(message: str):
-    """Add message to TTS queue, skip exact duplicates at tail."""
     with voice_lock:
         if len(voice_queue) >= MAX_QUEUE:
             voice_queue.clear()
@@ -65,17 +65,15 @@ def enqueue_voice(message: str):
 
 
 # ─────────────────────────────────────────────
-# TTS Worker — fallback to print-based
+# TTS Worker
 # ─────────────────────────────────────────────
 def tts_worker():
     print("TTS WORKER STARTED")
-
     while True:
         text = None
         with voice_lock:
             if voice_queue:
                 text = voice_queue.popleft()
-
         if text:
             print(f"Speaking: {text}")
         else:
@@ -83,7 +81,7 @@ def tts_worker():
 
 
 # ─────────────────────────────────────────────
-# Detection state (thread-safe)
+# Detection state
 # ─────────────────────────────────────────────
 detect_lock = Lock()
 last_detect_call: float = 0.0
@@ -117,7 +115,7 @@ def get_direction(box_center_x: float, frame_width: int) -> str:
 
 
 # ─────────────────────────────────────────────
-# Haversine distance (metres) — replaces wrong Euclidean calc
+# Haversine distance
 # ─────────────────────────────────────────────
 def haversine(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     R = 6_371_000
@@ -129,90 +127,12 @@ def haversine(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
 
 
 # ─────────────────────────────────────────────
-# Background detection worker
-# ─────────────────────────────────────────────
-def background_worker():
-    global last_detect_call
-    while True:
-        try:
-            ret, frame = read_frame()
-            if not ret or frame is None:
-                logging.warning("Frame drop in background_worker")
-                time.sleep(0.2)
-                continue
-
-            results = model(frame, verbose=False)
-
-            best_object = None
-            best_score = 0
-            best_direction = "ahead"
-            all_detected = []
-
-            frame_h, frame_w = frame.shape[:2]
-
-            for r in results:
-                for box in r.boxes:
-                    cls = int(box.cls[0])
-                    conf = float(box.conf[0])
-                    if conf < 0.3:
-                        continue
-
-                    label = model.names[cls]
-                    if label in IGNORE_OBJECTS:
-                        continue
-
-                    x1, y1, x2, y2 = box.xyxy[0]
-                    box_area = (x2 - x1) * (y2 - y1)
-                    if box_area < MIN_BOX_AREA:
-                        continue
-
-                    all_detected.append(label)
-                    score = PRIORITY_MAP.get(label, 1) * 100_000 + float(box_area)
-
-                    if score > best_score:
-                        best_score = score
-                        best_object = label
-                        best_direction = get_direction((x1 + x2) / 2, frame_w)
-
-            current_time = time.time()
-
-            with detect_lock:
-                elapsed = current_time - last_detect_call
-
-            if best_object and elapsed > 3.0:
-                # ✅ Queue clear karo — purana backlog flush
-                with voice_lock:
-                    voice_queue.clear()
-                message = f"{best_object} {best_direction}"
-                enqueue_voice(message)
-                with detect_lock:
-                    last_detect_call = current_time
-
-            elif not best_object and all_detected and elapsed > 3.0:
-                with voice_lock:
-                    voice_queue.clear()
-                enqueue_voice(f"{all_detected[0]} ahead")
-                with detect_lock:
-                    last_detect_call = current_time
-
-            time.sleep(0.3)
-
-        except Exception as e:
-            logging.error(f"background_worker error: {e}")
-            time.sleep(1)
-
-
-# ─────────────────────────────────────────────
-# Lifespan (replaces deprecated @app.on_event)
+# Lifespan
 # ─────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # ❌ disable backend camera detection
-    # Thread(target=background_worker, daemon=True).start()
-
     Thread(target=tts_worker, daemon=True).start()
     yield
-    # cleanup on shutdown
     if camera is not None:
         camera.release()
 
@@ -281,7 +201,6 @@ def get_route(data: dict):
     def clean_html(raw_html):
         text = re.sub(r'<[^>]+>', '', raw_html)
         text = re.sub(r'([a-z])([A-Z])', r'\1 \2', text)
-
         remove_phrases = [
             "Restricted usage road",
             "Destination will be on the left",
@@ -289,12 +208,9 @@ def get_route(data: dict):
         ]
         for phrase in remove_phrases:
             text = text.replace(phrase, "")
-
         text = re.sub(r'Pass by.*', '', text, flags=re.IGNORECASE)
         text = re.sub(r'\s+', ' ', text).strip()
-
         lower = text.lower()
-
         if "roundabout" in lower:
             return "Take roundabout exit"
         if "exit" in lower:
@@ -309,14 +225,12 @@ def get_route(data: dict):
             return "Slight left"
         if "continue" in lower or "head" in lower:
             return "Go straight"
-
         return text.split('.')[0]
 
     try:
         logging.info(f"Fetching route: {origin} -> {destination}")
         res = requests.get(url, params=params, timeout=5)
         result = res.json()
-
         steps = []
         for step in result["routes"][0]["legs"][0]["steps"]:
             steps.append({
@@ -326,14 +240,11 @@ def get_route(data: dict):
                 "start_location": step["start_location"],
                 "end_location": step["end_location"]
             })
-
         with nav_lock:
             global current_route_steps, current_step_index
             current_route_steps = steps
             current_step_index = 0
-
         return {"route": {"steps": steps}}
-
     except Exception as e:
         logging.error(f"Route error: {e}")
         return {"route": {"steps": []}}
@@ -343,11 +254,9 @@ def get_route(data: dict):
 def process_command(data: dict):
     text = data.get("text", "").lower()
     logging.info(f"Received voice: {text}")
-
     destination = "Metro Station"
     if "to" in text:
         destination = text.split("to")[-1].strip()
-
     if any(w in text for w in ["go", "take me", "navigate"]):
         return {"intent": "NAVIGATE", "destination": destination}
     elif "stop" in text:
@@ -358,7 +267,6 @@ def process_command(data: dict):
         return {"intent": "DETECTION"}
     elif "where am i" in text:
         return {"intent": "LOCATION"}
-
     return {"intent": "UNKNOWN"}
 
 
@@ -375,127 +283,6 @@ def send_sos(data: dict):
     location = data.get("location", "unknown")
     logging.warning(f"SOS received at location: {location}")
     return {"status": "SOS sent 🚨", "location": location}
-
-
-# @app.post("/detect")
-# def detect():
-'''
-    ret, frame = read_frame()
-    if not ret:
-        return JSONResponse(content={"error": "Camera read failed"}, status_code=500)
-
-    try:
-        results = model(frame, verbose=False)
-        objects = []
-        for r in results:
-            for box in r.boxes:
-                if float(box.conf[0]) > 0.3:
-                    objects.append(model.names[int(box.cls[0])])
-        unique_objects = list(set(objects))
-        return {"objects": unique_objects, "count": len(unique_objects)}
-    except Exception as e:
-        logging.error(f"Detection error: {e}")
-        return JSONResponse(content={"error": str(e)}, status_code=500)
-'''
-
-
-# NOTE: /camera-detect removed — it was blocking the server with a UI window.
-# Use /detect or /detect-live instead.
-
-
- # ❌ NOT USED (frontend should not call this anymore)
-# @app.post("/detect-live")
-def detect_live():
-    global last_detect_call
-
-    with detect_lock:
-        if time.time() - last_detect_call < DETECT_COOLDOWN:
-            return {"error": "Too many requests"}
-        last_detect_call = time.time()
-
-    ret, frame = read_frame()
-    if not ret:
-        return {"error": "Frame not captured"}
-
-    try:
-        results = model(frame, verbose=False)
-        objects = []
-        alerts = []
-        frame_h, frame_w = frame.shape[:2]
-
-        for r in results:
-            for box in r.boxes:
-                cls = int(box.cls[0])
-                conf = float(box.conf[0])
-                if conf <= 0.3:
-                    continue
-
-                label = model.names[cls]
-                # 🔥 allow only important objects
-                IMPORTANT = {
-                    "person", "car", "truck", "bus",
-                    "bicycle", "motorcycle",
-                    "wall", "tree", "pole"
-                }
-                if label not in IMPORTANT:
-                    continue
-
-                x1, y1, x2, y2 = box.xyxy[0]
-                box_area = (x2 - x1) * (y2 - y1)
-
-                # 🔥 approximate distance (bigger box = closer object)
-                distance_est = 200000 / box_area if box_area > 0 else 999
-
-                # 🔥 special handling for walls (detect only when close)
-                if label == "wall" and distance_est < 2.5:
-                    direction = get_direction((x1 + x2) / 2, frame_w)
-                    alert_msg = f"wall ahead" if direction == "ahead" else f"wall ahead {direction}"
-                    alerts.append(alert_msg)
-                    enqueue_voice("Wall ahead. Stop.")
-
-                # 🔥 normal objects
-                elif box_area > 50000:
-                    direction = get_direction((x1 + x2) / 2, frame_w)
-                    alert_msg = f"{label} ahead" if direction == "ahead" else f"{label} ahead {direction}"
-                    alerts.append(alert_msg)
-                    enqueue_voice(f"{label} {direction}")
-
-                objects.append(label)
-
-        # 🔥 BETTER WALL DETECTION (distance-based fallback)
-        if len(objects) == 0:
-            frame_area = frame.shape[0] * frame.shape[1]
-
-            # assume full frame = close obstacle
-            distance_est = 200000 / frame_area if frame_area > 0 else 999
-
-            if distance_est < 2.5:
-                enqueue_voice("Obstacle very close. Stop.")
-                alerts.append("obstacle ahead")
-
-        return {"objects": list(set(objects)), "count": len(set(objects)), "alerts": list(set(alerts))}
-
-    except Exception as e:
-        logging.error(f"Live detect error: {e}")
-        return {"error": str(e)}
-
-
-# @app.get("/detect-stream")
-def detect_stream():
-    # Uses global camera — no new VideoCapture
-    detections = []
-    for _ in range(10):
-        ret, frame = read_frame()
-        if not ret:
-            break
-        results = model(frame, verbose=False)
-        for r in results:
-            for box in r.boxes:
-                if float(box.conf[0]) > 0.3:
-                    detections.append(model.names[int(box.cls[0])])
-
-    unique = list(set(detections))
-    return {"objects": unique, "count": len(unique)}
 
 
 @app.post("/send-sos-advanced")
@@ -523,7 +310,6 @@ def get_locations():
 def decision(data: dict):
     objects = data.get("objects", [])
     step = data.get("step", "")
-
     if any(obj in ["person", "car", "truck", "bus"] for obj in objects):
         return {"action": "STOP", "priority": 1, "message": "Obstacle very close 🚨"}
     if "left" in step.lower():
@@ -553,51 +339,37 @@ def get_next_voice():
 @app.post("/update-location")
 def update_location(data: dict):
     global current_step_index, last_spoken_step
-
     user_lat = data.get("lat")
     user_lng = data.get("lng")
-
     if user_lat is None or user_lng is None:
         return {"error": "Location missing"}
-
     with nav_lock:
         if not current_route_steps:
             return {"error": "No active route"}
-
         current_step = current_route_steps[current_step_index]
         step_lat = current_step["end_location"]["lat"]
         step_lng = current_step["end_location"]["lng"]
-
-        # ✅ Haversine distance (was wrong Euclidean before)
         distance_m = haversine(user_lat, user_lng, step_lat, step_lng)
-
         if distance_m < 10 and current_step_index < len(current_route_steps) - 1:
             current_step_index += 1
-
         current_text = current_route_steps[current_step_index]["text"]
-
         if current_text != last_spoken_step:
             enqueue_voice(f"Navigation: {current_text}")
             last_spoken_step = current_text
-
         return {
             "current_step": current_route_steps[current_step_index],
             "step_index": current_step_index
         }
 
 
-
 # ─────────────────────────────────────────────
 # Image detection from posted image
 # ─────────────────────────────────────────────
-from fastapi import File, UploadFile
-
 @app.post("/detect-image")
 async def detect_image(file: UploadFile = File(...)):
     logging.info("/detect-image HIT")
     try:
         contents = await file.read()
-
         nparr = np.frombuffer(contents, np.uint8)
         frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
@@ -606,14 +378,47 @@ async def detect_image(file: UploadFile = File(...)):
 
         results = model(frame, verbose=False)
 
-        objects = []
+        frame_width = frame.shape[1]
+        result_objects = []
+
         for r in results:
             for box in r.boxes:
-                if float(box.conf[0]) > 0.3:
-                    label = model.names[int(box.cls[0])]
-                    objects.append(label)
+                # Confidence check
+                if float(box.conf[0]) < 0.3:
+                    continue
 
-        return {"objects": list(set(objects))}
+                x1, y1, x2, y2 = box.xyxy[0].tolist()
+                box_area = (x2 - x1) * (y2 - y1)
+
+                # Chote/door objects ignore karo — MIN_BOX_AREA se chhote skip
+                if box_area < MIN_BOX_AREA:
+                    continue
+
+                label = model.names[int(box.cls[0])]
+
+                # Irrelevant objects ignore karo
+                if label in IGNORE_OBJECTS:
+                    continue
+
+                # Direction calculate karo
+                center_x = (x1 + x2) / 2
+                direction = get_direction(center_x, frame_width)
+
+                if label in NAMED_OBJECTS:
+                    # Named object — naam + direction bolega
+                    result_objects.append(f"{label} {direction}")
+                else:
+                    # Unknown object — "obstacle" + direction bolega
+                    result_objects.append(f"obstacle {direction}")
+
+        # Duplicates hata do (same label + direction)
+        unique_objects = list(set(result_objects))
+
+        if not unique_objects:
+            return {"objects": []}
+
+        return {"objects": unique_objects}
 
     except Exception as e:
+        logging.error(f"detect-image error: {e}")
         return {"error": str(e)}
