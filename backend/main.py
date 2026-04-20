@@ -33,7 +33,7 @@ import os
 if os.getenv("RENDER"):
     camera = None
 else:
-    camera = cv2.VideoCapture(0)
+    camera = None
 if camera is not None and not camera.isOpened():
     logging.error("Global camera failed to initialize")
 
@@ -207,8 +207,9 @@ def background_worker():
 # ─────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if not os.getenv("RENDER"):
-        Thread(target=background_worker, daemon=True).start()
+    # ❌ disable backend camera detection
+    # Thread(target=background_worker, daemon=True).start()
+
     Thread(target=tts_worker, daemon=True).start()
     yield
     # cleanup on shutdown
@@ -230,8 +231,10 @@ async def log_requests(request, call_next):
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "*",
         "http://localhost:5173",
-        "https://nav-assist-main.vercel.app/"
+        "https://nav-assist-main.vercel.app",
+        "http://localhost:8080"
     ],
     allow_credentials=False,
     allow_methods=["*"],
@@ -374,8 +377,9 @@ def send_sos(data: dict):
     return {"status": "SOS sent 🚨", "location": location}
 
 
-@app.post("/detect")
-def detect():
+# @app.post("/detect")
+# def detect():
+'''
     ret, frame = read_frame()
     if not ret:
         return JSONResponse(content={"error": "Camera read failed"}, status_code=500)
@@ -392,13 +396,15 @@ def detect():
     except Exception as e:
         logging.error(f"Detection error: {e}")
         return JSONResponse(content={"error": str(e)}, status_code=500)
+'''
 
 
 # NOTE: /camera-detect removed — it was blocking the server with a UI window.
 # Use /detect or /detect-live instead.
 
 
-@app.post("/detect-live")
+ # ❌ NOT USED (frontend should not call this anymore)
+# @app.post("/detect-live")
 def detect_live():
     global last_detect_call
 
@@ -474,7 +480,7 @@ def detect_live():
         return {"error": str(e)}
 
 
-@app.get("/detect-stream")
+# @app.get("/detect-stream")
 def detect_stream():
     # Uses global camera — no new VideoCapture
     detections = []
@@ -588,6 +594,7 @@ from fastapi import File, UploadFile
 
 @app.post("/detect-image")
 async def detect_image(file: UploadFile = File(...)):
+    logging.info("/detect-image HIT")
     try:
         contents = await file.read()
 
