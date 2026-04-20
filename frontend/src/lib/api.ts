@@ -1,4 +1,4 @@
-const API_BASE = "https://navassist-main.onrender.com";
+const API_BASE = "http://192.168.1.10:8000";
 
 // ─── Helper: data URL → Blob (no extra fetch needed) ───────────────────────
 function base64ToBlob(dataUrl: string): Blob {
@@ -16,7 +16,6 @@ function base64ToBlob(dataUrl: string): Blob {
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
-  
   try {
     const res = await fetch(`${API_BASE}${path}`, {
       headers:
@@ -96,7 +95,7 @@ export const api = {
     formData.append("file", blob, "frame.jpg"); // ✅ filename required by FastAPI
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 60000);
+    const timeout = setTimeout(() => controller.abort(), 15000);
 
     try {
       const res = await fetch(`${API_BASE}/detect-image`, {
