@@ -132,13 +132,32 @@ const MainScreen: React.FC = () => {
         if (!video || video.readyState < 2 || video.videoWidth === 0) return;
 
         const image = await camera.captureFrame();
-        if (!image || !(image instanceof Blob) || image.size < 1000) {
-          console.log("Invalid/empty image", image);
+        let fileBlob = image;
+
+        // If captureFrame returns base64 string, convert to Blob
+        if (typeof image === "string") {
+          if (!image.startsWith("data:image")) {
+            console.log("Invalid image string format", image);
+            return;
+          }
+          const arr = image.split(",");
+          const mime = arr[0].match(/:(.*?);/)?.[1] || "image/jpeg";
+          const bstr = atob(arr[1]);
+          let n = bstr.length;
+          const u8arr = new Uint8Array(n);
+          while (n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+          }
+          fileBlob = new Blob([u8arr], { type: mime });
+        }
+
+        if (!fileBlob || !(fileBlob instanceof Blob) || fileBlob.size < 1000) {
+          console.log("Invalid/empty image", fileBlob);
           return;
         }
 
         const formData = new FormData();
-        formData.append("file", image, "frame.jpg");
+        formData.append("file", fileBlob, "frame.jpg");
 
         const response = await fetch(`${API_BASE}/detect-image`, {
           method: "POST",
