@@ -129,12 +129,11 @@ const MainScreen: React.FC = () => {
       try {
         console.log("DETECTION RUNNING");
         const video = camera.videoRef.current;
-        if (!video || video.readyState < 2) return;
+        if (!video || video.readyState < 2 || video.videoWidth === 0) return;
 
         const image = await camera.captureFrame();
-        if (!image) return;
-        if (!(image instanceof Blob)) {
-          console.log("Invalid blob", image);
+        if (!image || !(image instanceof Blob) || image.size < 1000) {
+          console.log("Invalid/empty image", image);
           return;
         }
 

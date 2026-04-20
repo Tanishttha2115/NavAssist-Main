@@ -577,25 +577,33 @@ def update_location(data: dict):
         }
 
 
+
 # ─────────────────────────────────────────────
 # Image detection from posted image
 # ─────────────────────────────────────────────
+from fastapi import File, UploadFile
+
 @app.post("/detect-image")
-async def detect_image(request: Request):
-    body = await request.body()
+async def detect_image(file: UploadFile = File(...)):
+    try:
+        contents = await file.read()
 
-    np_arr = np.frombuffer(body, np.uint8)
-    frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+        nparr = np.frombuffer(contents, np.uint8)
+        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-    if frame is None:
-        return {"error": "Invalid image"}
+        if frame is None:
+            return {"error": "Invalid image"}
 
-    results = model(frame, verbose=False)
+        results = model(frame, verbose=False)
 
-    objects = []
-    for r in results:
-        for box in r.boxes:
-            if float(box.conf[0]) > 0.3:
-                objects.append(model.names[int(box.cls[0])])
+        objects = []
+        for r in results:
+            for box in r.boxes:
+                if float(box.conf[0]) > 0.3:
+                    label = model.names[int(box.cls[0])]
+                    objects.append(label)
 
-    return {"objects": list(set(objects))}
+        return {"objects": list(set(objects))}
+
+    except Exception as e:
+        return {"error": str(e)}
