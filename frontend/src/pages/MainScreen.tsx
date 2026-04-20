@@ -133,13 +133,17 @@ const MainScreen: React.FC = () => {
 
         const image = await camera.captureFrame();
         if (!image) return;
+        if (!(image instanceof Blob)) {
+          console.log("Invalid blob", image);
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", image, "frame.jpg");
 
         const response = await fetch(`${API_BASE}/detect-image`, {
           method: "POST",
-          body: image,
-          headers: {
-            "Content-Type": "application/octet-stream"
-          }
+          body: formData
         });
         const res = await response.json();
         console.log("DETECTION RESPONSE:", res);
