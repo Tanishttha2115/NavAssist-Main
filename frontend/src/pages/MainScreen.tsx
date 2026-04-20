@@ -39,6 +39,7 @@ const MainScreen: React.FC = () => {
 
   const detectionRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastSpokenRef = useRef("");
+  const isDetecting = useRef(false); // ✅ Component ke andar — in-flight guard
 
   // Welcome message
   useEffect(() => {
@@ -106,6 +107,7 @@ const MainScreen: React.FC = () => {
       if (detectionRef.current) clearInterval(detectionRef.current);
       setDetectedObjects([]);
       lastSpokenRef.current = "";
+      isDetecting.current = false;
       return;
     }
 
@@ -123,72 +125,74 @@ const MainScreen: React.FC = () => {
       return `${Label} on right, move left`;
     };
 
-const tick = async () => {
-  try {
-    console.log("DETECTION RUNNING");
+    const tick = async () => {
+      // ✅ Agar pehli request abhi chal rahi hai toh skip karo
+      if (isDetecting.current) return;
+      isDetecting.current = true;
 
-    const video = camera.videoRef.current;
-    if (!video || video.readyState < 2 || video.videoWidth === 0) {
-      console.log("Video ref not ready, retrying...");
-      return;
-    }
+      try {
+        console.log("DETECTION RUNNING");
 
-    const image = camera.captureFrame();
-    if (!image) return;
+        const video = camera.videoRef.current;
+        if (!video || video.readyState < 2 || video.videoWidth === 0) {
+          console.log("Video ref not ready, retrying...");
+          return;
+        }
 
-    console.log("IMAGE BAN GYI");
-    console.log("LENGTH:", image.length);
+        const image = camera.captureFrame();
+        if (!image) return;
 
-    const res = await api.detectLive(image);
-    if (!res) return;
+        console.log("IMAGE BAN GYI, LENGTH:", image.length);
 
-    console.log("DETECTION RESPONSE:", res);
+        const res = await api.detectLive(image);
+        if (!res) return;
 
-    const objects: string[] = res.objects ?? [];
-    if (objects.length === 0) return;
+        console.log("DETECTION RESPONSE:", res);
 
-    // ✅ Backend already "person slightly left" / "car ahead" deta hai
-    // Khud se "ahead" mat lagao
-    const parsed = objects.map((obj) => {
-      const tokens = obj.toLowerCase().trim().split(/\s+/);
-      let position: "left" | "center" | "right" = "center";
-      if (tokens.includes("left")) position = "left";
-      else if (tokens.includes("right")) position = "right";
+        const objects: string[] = res.objects ?? [];
+        if (objects.length === 0) return;
 
-      // label = pehla token (person, car, obstacle etc.)
-      const label = tokens[0] || "object";
+        // Backend already "person slightly left" / "car ahead" deta hai
+        const parsed = objects.map((obj) => {
+          const tokens = obj.toLowerCase().trim().split(/\s+/);
+          let position: "left" | "center" | "right" = "center";
+          if (tokens.includes("left")) position = "left";
+          else if (tokens.includes("right")) position = "right";
+          const label = tokens[0] || "object";
+          return { label, position };
+        });
 
-      return { label, position };
-    });
+        // Priority: center (danger) > left/right (warning)
+        const chosen = parsed.find((p) => p.position === "center") || parsed[0];
 
-    // Priority: danger (center) > warning (left/right)
-    const chosen =
-      parsed.find((p) => p.position === "center") || parsed[0];
+        const key = `${chosen.label}-${chosen.position}`;
+        if (lastSpokenRef.current === key) return; // Same cheez dobara mat bolo
+        lastSpokenRef.current = key;
 
-    const key = `${chosen.label}-${chosen.position}`;
-    if (lastSpokenRef.current === key) return; // Same cheez dobara mat bolo
-    lastSpokenRef.current = key;
+        const obj: DetectedObject = {
+          label: chosen.label,
+          position: chosen.position,
+          severity: chosen.position === "center" ? "danger" : "warning",
+        };
 
-    const obj: DetectedObject = {
-      label: chosen.label,
-      position: chosen.position,
-      severity: chosen.position === "center" ? "danger" : "warning",
+        setDetectedObjects([obj]);
+        speakOnce(phraseFor(chosen.label, chosen.position));
+
+        if (chosen.position === "center") danger();
+        else if (chosen.position === "left") left();
+        else right();
+
+      } catch (err) {
+        console.error("Detection error:", err);
+      } finally {
+        // ✅ Hamesha reset — chahe success ho ya error
+        isDetecting.current = false;
+      }
     };
 
-    setDetectedObjects([obj]);
-    speakOnce(phraseFor(chosen.label, chosen.position));
-
-    if (chosen.position === "center") danger();
-    else if (chosen.position === "left") left();
-    else right();
-
-  } catch (err) {
-    console.error("Detection error:", err);
-  }
-};
-
     tick();
-    detectionRef.current = setInterval(tick, 1500);
+    detectionRef.current = setInterval(tick, 3000); // ✅ 1500 → 3000ms
+
     return () => {
       if (detectionRef.current) clearInterval(detectionRef.current);
     };

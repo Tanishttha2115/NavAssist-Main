@@ -95,7 +95,7 @@ export const api = {
     formData.append("file", blob, "frame.jpg"); // ✅ filename required by FastAPI
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
+    const timeout = setTimeout(() => controller.abort(), 60000);
 
     try {
       const res = await fetch(`${API_BASE}/detect-image`, {
