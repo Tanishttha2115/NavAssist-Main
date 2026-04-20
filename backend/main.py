@@ -11,6 +11,8 @@ import time
 import logging
 import requests
 import re
+from fastapi import Request
+import numpy as np
 
 # ─────────────────────────────────────────────
 # Logging
@@ -573,3 +575,27 @@ def update_location(data: dict):
             "current_step": current_route_steps[current_step_index],
             "step_index": current_step_index
         }
+
+
+# ─────────────────────────────────────────────
+# Image detection from posted image
+# ─────────────────────────────────────────────
+@app.post("/detect-image")
+async def detect_image(request: Request):
+    body = await request.body()
+
+    np_arr = np.frombuffer(body, np.uint8)
+    frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+
+    if frame is None:
+        return {"error": "Invalid image"}
+
+    results = model(frame, verbose=False)
+
+    objects = []
+    for r in results:
+        for box in r.boxes:
+            if float(box.conf[0]) > 0.3:
+                objects.append(model.names[int(box.cls[0])])
+
+    return {"objects": list(set(objects))}
