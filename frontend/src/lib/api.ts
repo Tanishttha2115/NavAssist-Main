@@ -60,15 +60,35 @@ export const api = {
     });
   },
 
-  detectLive: (image?: string) =>
-    request<{ alerts?: string[]; objects?: DetectedObject[]; error?: string }>("/detect-live", {
-      method: image ? "POST" : "GET",
-      body: image
-        ? JSON.stringify({
-            image: image.includes(",") ? image.split(",")[1] : image,
-          })
-        : undefined,
-    }),
+  detectLive: async (image?: string) => {
+    if (!image) {
+      return request<{ alerts?: string[]; objects?: DetectedObject[]; error?: string }>("/detect-live", {
+        method: "GET",
+      });
+    }
+
+    const base64 = image.includes(",") ? image.split(",")[1] : image;
+
+    const byteString = atob(base64);
+    const arrayBuffer = new ArrayBuffer(byteString.length);
+    const uint8Array = new Uint8Array(arrayBuffer);
+
+    for (let i = 0; i < byteString.length; i++) {
+      uint8Array[i] = byteString.charCodeAt(i);
+    }
+
+    const blob = new Blob([uint8Array], { type: "image/jpeg" });
+    const formData = new FormData();
+    formData.append("file", blob, "frame.jpg");
+
+    const res = await fetch(`${API_BASE}/detect-live`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!res.ok) throw new Error(`API error: ${res.status}`);
+    return res.json();
+  },
 
   sendSOS: (location: { latitude: number; longitude: number }) =>
     request<{ status: string }>("/send-sos", {
