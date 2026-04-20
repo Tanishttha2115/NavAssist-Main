@@ -205,7 +205,8 @@ def background_worker():
 # ─────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    Thread(target=background_worker, daemon=True).start()
+    if not os.getenv("RENDER"):
+        Thread(target=background_worker, daemon=True).start()
     Thread(target=tts_worker, daemon=True).start()
     yield
     # cleanup on shutdown
