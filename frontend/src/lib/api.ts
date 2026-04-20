@@ -64,7 +64,7 @@ export const api = {
     if (!image) {
       return request<{ alerts?: string[]; objects?: DetectedObject[]; error?: string }>("/detect-live", {
         method: "GET",
-      });
+      }); 
     }
 
     const base64 = image.includes(",") ? image.split(",")[1] : image;
@@ -81,7 +81,7 @@ export const api = {
     const formData = new FormData();
     formData.append("file", blob, "frame.jpg");
 
-    const res = await fetch(`${API_BASE}/detect-live`, {
+    const res = await fetch(`${API_BASE}/detect-image`, {
       method: "POST",
       body: formData,
     });
