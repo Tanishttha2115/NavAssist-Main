@@ -123,64 +123,69 @@ const MainScreen: React.FC = () => {
       return `${Label} on right, move left`;
     };
 
-    const tick = async () => {
-      try {
-        console.log("DETECTION RUNNING");
+const tick = async () => {
+  try {
+    console.log("DETECTION RUNNING");
 
-        const video = camera.videoRef.current;
-        if (!video || video.readyState < 2 || video.videoWidth === 0) return;
+    const video = camera.videoRef.current;
+    if (!video || video.readyState < 2 || video.videoWidth === 0) {
+      console.log("Video ref not ready, retrying...");
+      return;
+    }
 
-        // captureFrame returns base64 data URL string
-        const image = camera.captureFrame();
-        if (!image) return;
+    const image = camera.captureFrame();
+    if (!image) return;
 
-        // ✅ Use api.detectLive — handles base64→Blob + FormData correctly
-        const res = await api.detectLive(image);
-        if (!res) return;
+    console.log("IMAGE BAN GYI");
+    console.log("LENGTH:", image.length);
 
-        console.log("DETECTION RESPONSE:", res);
+    const res = await api.detectLive(image);
+    if (!res) return;
 
-        const objects: string[] = res.objects ?? [];
-        if (objects.length === 0) return;
+    console.log("DETECTION RESPONSE:", res);
 
-        // Map each object to a DetectedObject (all "center" since backend
-        // doesn't return position — position logic can be added later)
-        const alerts = objects.map((obj) => `${obj} ahead`);
+    const objects: string[] = res.objects ?? [];
+    if (objects.length === 0) return;
 
-        const parsed = alerts.map((a) => {
-          const tokens = a.toLowerCase().trim().split(/\s+/);
-          let position: "left" | "center" | "right" = "center";
-          if (tokens.includes("left")) position = "left";
-          else if (tokens.includes("right")) position = "right";
-          const label =
-            tokens.find((tk) => !["left", "right", "center", "ahead"].includes(tk)) ||
-            "object";
-          return { label, position };
-        });
+    // ✅ Backend already "person slightly left" / "car ahead" deta hai
+    // Khud se "ahead" mat lagao
+    const parsed = objects.map((obj) => {
+      const tokens = obj.toLowerCase().trim().split(/\s+/);
+      let position: "left" | "center" | "right" = "center";
+      if (tokens.includes("left")) position = "left";
+      else if (tokens.includes("right")) position = "right";
 
-        // Priority: center > left/right
-        const chosen =
-          parsed.find((p) => p.position === "center") || parsed[0];
+      // label = pehla token (person, car, obstacle etc.)
+      const label = tokens[0] || "object";
 
-        const key = `${chosen.label}-${chosen.position}`;
-        lastSpokenRef.current = key;
+      return { label, position };
+    });
 
-        const obj: DetectedObject = {
-          label: chosen.label,
-          position: chosen.position,
-          severity: chosen.position === "center" ? "danger" : "warning",
-        };
+    // Priority: danger (center) > warning (left/right)
+    const chosen =
+      parsed.find((p) => p.position === "center") || parsed[0];
 
-        setDetectedObjects([obj]);
-        speakOnce(phraseFor(chosen.label, chosen.position));
+    const key = `${chosen.label}-${chosen.position}`;
+    if (lastSpokenRef.current === key) return; // Same cheez dobara mat bolo
+    lastSpokenRef.current = key;
 
-        if (chosen.position === "center") danger();
-        else if (chosen.position === "left") left();
-        else right();
-      } catch (err) {
-        console.error("Detection error:", err);
-      }
+    const obj: DetectedObject = {
+      label: chosen.label,
+      position: chosen.position,
+      severity: chosen.position === "center" ? "danger" : "warning",
     };
+
+    setDetectedObjects([obj]);
+    speakOnce(phraseFor(chosen.label, chosen.position));
+
+    if (chosen.position === "center") danger();
+    else if (chosen.position === "left") left();
+    else right();
+
+  } catch (err) {
+    console.error("Detection error:", err);
+  }
+};
 
     tick();
     detectionRef.current = setInterval(tick, 1500);

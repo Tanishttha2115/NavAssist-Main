@@ -78,8 +78,8 @@ export const useCamera = () => {
     }
 
     const canvas = canvasRef.current;
-    canvas.width = 320;
-    canvas.height = Math.round((video.videoHeight / video.videoWidth) * 320);
+    canvas.width =640;
+    canvas.height = Math.round((video.videoHeight / video.videoWidth) * 640);
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
