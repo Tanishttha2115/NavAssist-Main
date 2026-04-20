@@ -63,7 +63,11 @@ export const api = {
   detectLive: (image?: string) =>
     request<{ alerts?: string[]; objects?: DetectedObject[]; error?: string }>("/detect-live", {
       method: image ? "POST" : "GET",
-      body: image ? JSON.stringify({ image }) : undefined,
+      body: image
+        ? JSON.stringify({
+            image: image.includes(",") ? image.split(",")[1] : image,
+          })
+        : undefined,
     }),
 
   sendSOS: (location: { latitude: number; longitude: number }) =>
