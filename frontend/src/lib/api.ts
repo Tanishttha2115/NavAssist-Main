@@ -1,4 +1,4 @@
-const API_BASE = "http://192.168.1.10:8000";
+const API_BASE = "https://navassist-main.onrender.com";
 
 // ─── Helper: data URL → Blob (no extra fetch needed) ───────────────────────
 function base64ToBlob(dataUrl: string): Blob {
