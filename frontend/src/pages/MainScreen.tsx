@@ -21,6 +21,8 @@ import OfflineBanner from "@/components/OfflineBanner";
 import ThemeToggle from "@/components/ThemeToggle";
 import LangToggle from "@/components/LangToggle";
 
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "";
+
 const MainScreen: React.FC = () => {
   const { t, speechLang } = useLang();
   const { location, error: locError } = useLocation();
@@ -127,9 +129,13 @@ const MainScreen: React.FC = () => {
       try {
         const image = camera.active ? camera.captureFrame() : null;
         if (!image) return;
-        const res = await api.detectLive(image);
+        const response = await fetch(`${API_BASE}/detect-image`, {
+          method: "POST",
+          body: image,
+        });
+        const res = await response.json();
         console.log("DETECTION RESPONSE:", res);
-        const alerts = (res.alerts ?? []).filter(Boolean);
+        const alerts = (res.objects ?? []).map(obj => `${obj} ahead`);
         if (alerts.length === 0) return;
 
         // Generic parse: "label position"
