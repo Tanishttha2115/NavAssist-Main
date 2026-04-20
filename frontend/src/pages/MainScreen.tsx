@@ -127,11 +127,19 @@ const MainScreen: React.FC = () => {
 
     const tick = async () => {
       try {
-        const image = camera.active ? camera.captureFrame() : null;
+        console.log("DETECTION RUNNING");
+        const video = camera.videoRef.current;
+        if (!video || video.readyState < 2) return;
+
+        const image = await camera.captureFrame();
         if (!image) return;
+
         const response = await fetch(`${API_BASE}/detect-image`, {
           method: "POST",
           body: image,
+          headers: {
+            "Content-Type": "application/octet-stream"
+          }
         });
         const res = await response.json();
         console.log("DETECTION RESPONSE:", res);
