@@ -16,6 +16,7 @@ function base64ToBlob(dataUrl: string): Blob {
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
+  s
   try {
     const res = await fetch(`${API_BASE}${path}`, {
       headers:
