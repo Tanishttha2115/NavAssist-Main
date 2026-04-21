@@ -2,6 +2,7 @@
   "id": "/",
   "name": "NavAssist",
   "short_name": "NavAssist",
+  "description": "NavAssist - Your personal navigation assistant",
   "start_url": "/",
   "scope": "/",
   "display": "fullscreen",
