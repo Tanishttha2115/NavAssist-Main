@@ -1,7 +1,7 @@
 <h1 align="center">NAVASSIST</h1>
 <h3 align="center"> AI-Powered Smart Navigation Assistant for Visually Impaired Users
 </h3>
-Overview
+<h3>Overview</h3>
 
 NavAssist is an AI-powered navigation and accessibility platform designed to help visually impaired individuals navigate safely, independently, and efficiently. The system combines Computer Vision, Real-Time Object Detection, Voice Assistance, GPS Navigation, Emergency Support, and Haptic Feedback to provide a hands-free navigation experience.
 
