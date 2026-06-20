@@ -60,33 +60,7 @@ Accessibility-Focused Design
 ⸻
 
 System Architecture
-
-+----------------------+
-|        User          |
-+----------+-----------+
-           |
-           v
-+----------------------+
-|   React Frontend     |
-| TypeScript + Vite    |
-+----------+-----------+
-           |
-           v
-+----------------------+
-|   FastAPI Backend    |
-+----------+-----------+
-           |
-  +--------+--------+
-  |        |        |
-  v        v        v
-Navigation  Voice   AI Detection
- Engine    Service    YOLOv8
-  |        |        |
-  +--------+--------+
-           |
-           v
- Emergency & Haptic Services
-
+![System Architecture](assets/1.png)
 ⸻
 
 Technology Stack
