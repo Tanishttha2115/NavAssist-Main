@@ -143,8 +143,9 @@ http://localhost:5173
 
 Navigation
 
+```bash
 POST /navigation
-
+```
 Provides route guidance and navigation instructions.
 
 Voice Commands
