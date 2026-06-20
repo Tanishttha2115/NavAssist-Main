@@ -83,56 +83,54 @@ The primary objective of NavAssist is to improve mobility, safety, and accessibi
 ![Project Structure](assets/2.png)
 
 <h2>Installation and Setup</h2>
-
 <h3>Clone the Repository</h3>
-
+```bash
 git clone https://github.com/Tanishttha/NavAssist.git
+```
+```bash
 cd NavAssist
-
+```
 <h3>Backend Setup</h3>
-
 Navigate to the backend directory:
-
+```bash
 cd backend
-
+```
 Create a virtual environment:
-
+```bash
 python -m venv venv
-
-Activate the virtual environment:
-
+```
+<h3>Activate the virtual environment:</h3>
 macOS / Linux
-
+```bash
 source venv/bin/activate
-
+```
 Windows
-
+```bash
 venv\Scripts\activate
-
+```
 Install dependencies:
-
+```bash
 pip install -r requirements.txt
-
+```
 Run the backend server:
-
+```bash
 uvicorn main:app --reload
-
+```
 Backend will be available at:
-
+```bash
 http://127.0.0.1:8000
-
+```
 <h3>Frontend Setup</h3>
-
 Open a new terminal:
-
+```bash
 cd frontend
 
 Install dependencies:
-
+```bash
 npm install
 
 Run the development server:
-
+```bash
 npm run dev
 
 Frontend will be available at:
