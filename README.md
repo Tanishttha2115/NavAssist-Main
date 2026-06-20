@@ -101,22 +101,27 @@ python -m venv venv
 ```
 <h3>Activate the virtual environment:</h3>
 macOS / Linux
+
 ```bash
 source venv/bin/activate
 ```
 Windows
+
 ```bash
 venv\Scripts\activate
 ```
 Install dependencies:
+
 ```bash
 pip install -r requirements.txt
 ```
 Run the backend server:
+
 ```bash
 uvicorn main:app --reload
 ```
 Backend will be available at:
+
 ```bash
 http://127.0.0.1:8000
 ```
