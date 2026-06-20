@@ -120,28 +120,32 @@ pip install -r requirements.txt
 ```bash
 uvicorn main:app --reload
 ```
-Backend will be available at:
+<h3>Backend will be available at:</h3>
 
 ```bash
 http://127.0.0.1:8000
 ```
 <h3>Frontend Setup</h3>
-Open a new terminal:
+<h4>Open a new terminal:</h4>
+
 ```bash
 cd frontend
+```
+<h4>Install dependencies:</h4>
 
-Install dependencies:
 ```bash
 npm install
+```
+<h4>Run the development server:</h4>
 
-Run the development server:
 ```bash
 npm run dev
+```
+<h4>Frontend will be available at:</h4>
 
-Frontend will be available at:
-
+```bash
 http://localhost:5173
-
+```
 <h3>API Endpoints</h3>
 
 Navigation
