@@ -53,36 +53,34 @@ The primary objective of NavAssist is to improve mobility, safety, and accessibi
 
 ![System Architecture](assets/1.png)
 
-Technology Stack
+<h2>Technology Stack</h2>
 
-Frontend
+<h3>Frontend</h3>
 
 * React
 * TypeScript
 * Vite
 * Tailwind CSS
 
-Backend
+<h3>Backend</h3>
 
 * FastAPI
 * Python
 
-AI and Computer Vision
+<h3>AI and Computer Vision</h3>
 
 * YOLOv8
 * OpenCV
 * NumPy
 
-APIs and Services
+<h3>APIs and Services</h3>
 
 * Google Maps API
 * Browser Geolocation API
 * Speech Recognition API
 * Text-to-Speech API
 
-⸻
-
-Project Structure
+<h2>Project Structure</h2>
 
 NavAssist
 │
