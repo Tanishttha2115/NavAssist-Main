@@ -1,9 +1,6 @@
 <h1 align="center">NAVASSIST</h1>
 
-<p align="center">
-
-AI-Powered Smart Navigation Assistant for Visually Impaired Users
-
+<p align="center"> AI-Powered Smart Navigation Assistant for Visually Impaired Users
 </p>
 Overview
 
