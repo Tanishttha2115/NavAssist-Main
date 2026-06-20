@@ -5,15 +5,16 @@
 NavAssist is an AI-powered navigation and accessibility platform designed to help visually impaired individuals navigate safely, independently, and efficiently. The system combines Computer Vision, Real-Time Object Detection, Voice Assistance, GPS Navigation, Emergency Support, and Haptic Feedback to provide a hands-free navigation experience.
 The primary objective of NavAssist is to improve mobility, safety, and accessibility for visually impaired users through intelligent assistive technology.
 
-⸻
 <h2>Features</h2>
-<h4>Smart Navigation</h4>
+<h3>Smart Navigation</h3>
+
 * Real-time route guidance
 * Turn-by-turn navigation assistance
 * Destination search functionality
 * Dynamic route updates
 
-AI Object Detection
+<h3>AI Object Detection</h3>
+
 * YOLOv8-powered obstacle detection
 * Real-time camera analysis
 * Detection of pedestrians, vehicles, poles, stairs, and obstacles
