@@ -1,4 +1,4 @@
-NavAssist
+<h1 align="center">NavAssist</h1>
 
 AI-Powered Smart Navigation Assistant for Visually Impaired Users
 
