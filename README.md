@@ -57,9 +57,7 @@ Accessibility-Focused Design
 * Minimal visual dependency
 * User-friendly accessible interface
 
-⸻
 ![System Architecture](assets/1.png)
-⸻
 
 Technology Stack
 
