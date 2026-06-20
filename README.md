@@ -110,12 +110,12 @@ Windows
 ```bash
 venv\Scripts\activate
 ```
-Install dependencies:
+<h3>Install dependencies:</h3>
 
 ```bash
 pip install -r requirements.txt
 ```
-Run the backend server:
+<h3>Run the backend server:</h3>
 
 ```bash
 uvicorn main:app --reload
