@@ -58,8 +58,6 @@ Accessibility-Focused Design
 * User-friendly accessible interface
 
 ⸻
-
-System Architecture
 ![System Architecture](assets/1.png)
 ⸻
 
