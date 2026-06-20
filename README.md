@@ -80,36 +80,11 @@ The primary objective of NavAssist is to improve mobility, safety, and accessibi
 * Speech Recognition API
 * Text-to-Speech API
 
-<h2>Project Structure</h2>
+![Project Structure](assets/2.png)
 
-NavAssist
-│
-├── frontend
-│   ├── public
-│   ├── src
-│   │   ├── components
-│   │   ├── contexts
-│   │   ├── hooks
-│   │   ├── pages
-│   │   └── lib
-│   └── package.json
-│
-├── backend
-│   ├── routes
-│   ├── services
-│   ├── models
-│   ├── utils
-│   ├── Future_modules
-│   ├── main.py
-│   └── requirements.txt
-│
-└── README.md
+<h2>Installation and Setup</h2>
 
-⸻
-
-Installation and Setup
-
-Clone the Repository
+<h3>Clone the Repository</h3>
 
 git clone https://github.com/Tanishttha/NavAssist.git
 cd NavAssist
