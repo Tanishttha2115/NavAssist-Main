@@ -144,7 +144,7 @@ npm run dev
 <h4>Frontend will be available at:</h4>
 
 ```bash
-http://localhost:5173
+http://localhost:8080
 ```
 <h3>API Endpoints</h3>
 <h4>Navigation</h4>
