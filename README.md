@@ -84,14 +84,17 @@ The primary objective of NavAssist is to improve mobility, safety, and accessibi
 
 <h2>Installation and Setup</h2>
 <h3>Clone the Repository</h3>
+
 ```bash
 git clone https://github.com/Tanishttha/NavAssist.git
 ```
+
 ```bash
 cd NavAssist
 ```
 <h3>Backend Setup</h3>
 Navigate to the backend directory:
+
 ```bash
 cd backend
 ```
