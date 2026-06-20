@@ -147,24 +147,23 @@ npm run dev
 http://localhost:5173
 ```
 <h3>API Endpoints</h3>
-
-Navigation
+<h4>Navigation</h4>
 
 ```bash
 POST /navigation
 ```
 Provides route guidance and navigation instructions.
+<h4>Voice Commands</h4>
 
-Voice Commands
-
+```bash
 POST /command
-
+```
 Processes user voice commands and generates responses.
+<h4>Emergency Services</h4>
 
-Emergency Services
-
+```bash
 POST /sos
-
+```
 Triggers emergency assistance functionality.
 
 <h2>Workflow</h2>
