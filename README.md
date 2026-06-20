@@ -89,9 +89,7 @@ The primary objective of NavAssist is to improve mobility, safety, and accessibi
 git clone https://github.com/Tanishttha/NavAssist.git
 cd NavAssist
 
-⸻
-
-Backend Setup
+<h3>Backend Setup</h3>
 
 Navigate to the backend directory:
 
@@ -123,9 +121,7 @@ Backend will be available at:
 
 http://127.0.0.1:8000
 
-⸻
-
-Frontend Setup
+<h3>Frontend Setup</h3>
 
 Open a new terminal:
 
@@ -143,9 +139,7 @@ Frontend will be available at:
 
 http://localhost:5173
 
-⸻
-
-API Endpoints
+<h3>API Endpoints</h3>
 
 Navigation
 
@@ -165,9 +159,7 @@ POST /sos
 
 Triggers emergency assistance functionality.
 
-⸻
-
-Workflow
+<h2>Workflow</h2>
 
 1. User enters a destination through voice or text input.
 2. Frontend sends the request to the FastAPI backend.
@@ -177,9 +169,7 @@ Workflow
 6. Haptic and audio alerts notify the user of hazards.
 7. Emergency module can be activated when assistance is required.
 
-⸻
-
-Future Enhancements
+<h2>Future Enhancements</h2>
 
 * Offline navigation support
 * Smart cane integration
@@ -190,15 +180,8 @@ Future Enhancements
 * Edge AI deployment for low-latency inference
 * Enhanced accessibility analytics
 
-⸻
-
-Live Demo
-
+<h2>Live Demo</h2>
 https://nav-assist-main.vercel.app
 
-⸻
-
-License
-
+<h2>License</h2>
 This project is licensed under the MIT License.
-
