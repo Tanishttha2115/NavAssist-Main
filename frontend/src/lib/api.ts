@@ -1,4 +1,4 @@
-const API_BASE = "https://uplifting-punisher-placard.ngrok-free.dev";
+const API_BASE = "http://localhost:8000";
 // ─── Helper: data URL → Blob (no extra fetch needed) ───────────────────────
 function base64ToBlob(dataUrl: string): Blob {
   const [header, base64] = dataUrl.split(",");
