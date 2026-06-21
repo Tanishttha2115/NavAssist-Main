@@ -161,10 +161,8 @@ def run_ai_pipeline(frame, route_data=None):
         route_data
     )
 
-    # 🔊 Voice Output
     generate_voice_output(result["message"], result["level"])
 
-    # 📳 Haptic Feedback
     haptic = get_haptic_pattern(result["action"], data.get("distance"))
 
     return {
