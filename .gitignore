@@ -38,3 +38,15 @@ __pycache__/
 backend/venv/
 venv/
 .venv/
+
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual Environment
+venv/
+backend/venv/
+.env
